@@ -1,0 +1,652 @@
+package com.example.testt
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import com.example.testt.ui.theme.TesttTheme
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.text.input.KeyboardType
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            TesttTheme {
+                var screen by remember { mutableStateOf("login") }
+                var userType by remember { mutableStateOf('G') }
+                val bottomNavigationBarHeight = 56.dp //What looks pretty good
+                val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(bottom = bottomPadding + bottomNavigationBarHeight)
+                    ) {
+                        when (screen) {
+                            "login" -> {
+                                Login(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onLoginSuccess = {
+                                        userType = 'U'
+                                        screen = "MainMenu"
+                                    },
+                                    onSignUpSuccess = {
+                                        userType = 'U'
+                                        screen = "SignUp"
+                                                      },
+                                    onGuestLogin = {
+                                        userType = 'G'
+                                        screen = "MainMenu"
+                                    }
+
+                                )
+                            }
+                            "SignUp" -> {
+                                SignUp(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSignUpSuccess = { screen = "MainMenu" }
+                                )
+                            }
+                            "MainMenu" -> {
+                                MainMenu(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSwipeRight = { screen = "Exercise" },
+                                    userType = userType
+                                )
+                            }
+                            "Exercise" -> {
+                                ExerciseScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSwipeLeft = { screen = "MainMenu" },
+                                    onSwipeRight = { screen = "Trainer" },
+                                    onMainMenu = { screen = "MainMenu"}
+                                )
+                            }
+                            "Trainer" -> {
+                                TrainerScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSwipeLeft = { screen = "Exercise" },
+                                    onSwipeRight = { screen = "User" },
+                                    onMainMenu = { screen = "MainMenu"},
+                                    userType = userType
+                                )
+                            }
+                            "User" -> {
+                                SettingsScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSwipeLeft = { screen = "Trainer" },
+                                    onMainMenu = { screen = "MainMenu"},
+                                    onBackClick = { screen = "login"},
+                                    userType = userType
+                                )
+                            }
+                        }
+                    }
+                    //The bottom bar
+                    if (screen in listOf("MainMenu", "Exercise", "Trainer", "User")) {
+                        BottomNavigationBar(
+                            currentScreen = screen,
+                            onScreenSelected = { newScreen ->
+                                screen = newScreen
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = bottomPadding)
+                                .height(bottomNavigationBarHeight)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun Login(
+    modifier: Modifier = Modifier,
+    onLoginSuccess: () -> Unit,
+    onSignUpSuccess: () -> Unit,
+    onGuestLogin: () -> Unit
+) {
+    var user by remember { mutableStateOf("") }
+    var pass by remember { mutableStateOf("") }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.duck),
+                contentDescription = ":/",      //just required :/
+                modifier = Modifier.size(300.dp),
+            )
+            Spacer(modifier = Modifier.height(30.dp))
+            Text(text = "Please enter Username and Password!")
+            Spacer(modifier = Modifier.height(10.dp))
+            TextField(
+                value = user,
+                onValueChange = { user = it },
+                label = { Text("Username") },
+                modifier = Modifier.fillMaxWidth(0.8f),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next
+                )
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            TextField(
+                value = pass,
+                onValueChange = { pass = it },
+                label = { Text("Password") },
+                modifier = Modifier.fillMaxWidth(0.8f),
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Done
+                )
+            )
+            Spacer(modifier = Modifier.height(30.dp))
+            Button(onClick = { onLoginSuccess() }) {
+                Text(text = "Log in")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val annotatedText = buildAnnotatedString {
+                append("Or continue as ")
+                withStyle(style = SpanStyle(
+                    color = Color.Blue,
+                    textDecoration = TextDecoration.Underline,
+                    fontSize = 16.sp
+                )) {
+                    pushStringAnnotation(tag = "G", annotation = "")
+                    append("Guest")
+                    pop()
+                }
+            }
+
+            ClickableText(
+                text = annotatedText,
+                modifier = Modifier.padding(10.dp),
+                onClick = { offset ->
+                    annotatedText.getStringAnnotations(tag = "G", start = offset, end = offset)
+                        .firstOrNull()?.let { onGuestLogin() }
+                }
+            )
+
+            val newOne = buildAnnotatedString {
+                append("Don't have an account? ")
+                withStyle(style = SpanStyle(
+                    color = Color.Blue,
+                    textDecoration = TextDecoration.Underline,
+                    fontSize = 16.sp
+                )) {
+                    pushStringAnnotation(tag = "NEW", annotation = "")
+                    append("Click here to make one!")
+                    pop()
+                }
+            }
+
+            ClickableText(
+                text = newOne,
+                modifier = Modifier.padding(10.dp),
+                onClick = { offset ->
+                    newOne.getStringAnnotations(tag = "NEW", start = offset, end = offset)
+                        .firstOrNull()?.let { onSignUpSuccess() }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun MainMenu(
+    modifier: Modifier = Modifier,
+    onSwipeRight: () -> Unit,
+    userType: Char
+) {
+    BackHandler(enabled = true) {/*This does nothing (No backwards press here)*/}
+    Box(
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { change, dragAmount ->
+                    change.consume()
+                    if (dragAmount < -50) {
+                        onSwipeRight()
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (userType == 'G') {
+                Text(text = "You are currently a guest!")
+                Spacer(modifier = Modifier.height(30.dp))
+            }
+            Text(text = "Main Menu")
+            Spacer(modifier = Modifier.height(30.dp))
+            Text(text = "Things like graphs an charts will go here!")
+        }
+    }
+}
+
+@Composable
+fun ExerciseScreen(
+    modifier: Modifier = Modifier,
+    onSwipeLeft: () -> Unit,
+    onSwipeRight: () -> Unit,
+    onMainMenu: () -> Unit
+) {
+    BackHandler {
+        onMainMenu()
+    }
+    Box(
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { change, dragAmount ->
+                    change.consume()
+                    if (dragAmount > 50) {
+                        onSwipeLeft()
+                    } else if (dragAmount < -50) {
+                        onSwipeRight()
+                    }
+                }
+            }
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Spacer(modifier = Modifier.height(30.dp))
+
+            Button(onClick = {}) {
+                Text(text = "Track Workout")
+            }
+            Spacer(modifier = Modifier.height(30.dp))
+
+            Button(onClick = {}) {
+                Text(text = "Log Workout")
+            }
+            Spacer(modifier = Modifier.height(30.dp))
+
+            Button(onClick = {}) {
+                Text(text = "Change Goals")
+            }
+            Spacer(modifier = Modifier.height(30.dp))
+        }
+        Button(
+            onClick = {},
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 20.dp)
+        ) {
+            Text(text = "Special Video")
+        }
+    }
+}
+
+
+@Composable
+fun TrainerScreen(
+    modifier: Modifier = Modifier,
+    onSwipeLeft: () -> Unit,
+    onMainMenu: () -> Unit,
+    onSwipeRight: () -> Unit,
+    userType: Char,
+) {
+    var screen by remember {mutableIntStateOf(1)}
+    var review by remember {mutableStateOf((""))}
+    BackHandler(enabled = screen == 2) {
+        screen = 1
+    }
+    BackHandler(enabled = screen == 1) {
+        onMainMenu()
+    }
+    Box(
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { change, dragAmount ->
+                    change.consume()
+                    if (dragAmount > 50) {
+                        onSwipeLeft()
+                    } else if (dragAmount < -50) {
+                        onSwipeRight()
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {         ///Need to update the below once we get paid users
+        if (userType == 'G') {
+            Text(text = "This is for users only!")
+        }
+        if (screen == 1 && userType != 'G') {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Button(onClick = {}) {
+                    Text(text = "View Workout Goals")
+                }
+            }
+            Button(
+                onClick = {screen = 2},
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(20.dp)
+            ) {
+                Text(text = "Review Trainer")
+            }
+        }
+        else if (screen == 2 && userType != 'G') {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Write what you think about your trainer\nYour trainer will not know it's from you\n")
+                TextField(
+                    value = review,
+                    onValueChange = { review = it },
+                    label = { Text("What are your thoughts?") },
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+            }
+            Button(onClick = {},
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(20.dp)
+            ) {
+                Text(text = "Submit Review")
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen(
+    modifier: Modifier = Modifier,
+    onSwipeLeft: () -> Unit,
+    onMainMenu: () -> Unit,
+    onBackClick: () -> Unit,
+    userType: Char
+) {
+    var screen by remember { mutableIntStateOf(1)}
+    BackHandler (enabled = screen == 1){
+        onMainMenu()
+    }
+    BackHandler (enabled = screen == 2){
+        screen = 1
+    }
+    Box(
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { change, dragAmount ->
+                    change.consume()
+                    if (dragAmount > 50) {
+                        onSwipeLeft()
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        if (screen == 1) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (userType != 'G') {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = {}) {
+                        Text(text = "Upgrade to premium")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = {}) {
+                        Text(text = "External Devices")
+                    }
+                }
+                else {
+                    Text(text = "You are currently a guest\nand do not have access to all features!")
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = {screen = 2}) {
+                    Text(text = "Account Settings")
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+        if (screen == 2) {
+            Button(onClick = {onBackClick() }) {
+                Text(text = "Log out")
+            }
+        }
+    }
+}
+@Composable
+fun BottomNavigationBar(
+    currentScreen: String,
+    onScreenSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val screens = listOf("MainMenu", "Exercise", "Trainer", "User")
+    val icons = listOf(
+        R.drawable.mainbottom,
+        R.drawable.exercisebottom,
+        R.drawable.trainerbottom,
+        R.drawable.settingsbottom
+    )
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .background(Color.LightGray),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        screens.forEachIndexed { index, screen ->
+            val isSelected = currentScreen == screen
+            val backgroundColor = if (isSelected) Color.Gray else Color.Transparent
+
+            Column(
+                modifier = Modifier
+                    .clickable { onScreenSelected(screen) }
+                    .background(backgroundColor)
+                    .padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = icons[index]),
+                    contentDescription = screen,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = screen.replace("MainMenu", "Main Menu").replace("User", "Settings"),
+                    color = if (isSelected) Color.White else Color.Black
+                )
+            }
+        }
+    }
+}
+@Composable
+fun SignUp(
+    modifier: Modifier = Modifier,
+    onSignUpSuccess: () -> Unit
+) {
+    var user by remember { mutableStateOf("") }
+    var pass by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var heightFeet by remember { mutableStateOf("") }
+    var heightInches by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
+    var screen by remember { mutableIntStateOf(1) }
+
+    // State to hold error messages
+    var errorMessage by remember { mutableStateOf("") }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.fillMaxSize()
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (screen == 1) {
+                Text("Please enter Username and Password!")
+                Spacer(modifier = Modifier.height(10.dp))
+                TextField(
+                    value = user,
+                    onValueChange = { user = it },
+                    label = { Text("Username") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = pass,
+                    onValueChange = { pass = it },
+                    label = { Text("Password") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    visualTransformation = PasswordVisualTransformation()
+                )
+                Spacer(modifier = Modifier.height(30.dp))
+                Button(onClick = {screen = 2}) {
+                    Text(text = "Next")
+                }
+            }
+            else {
+                Text("Please enter your Age, Height, and Weight!")
+                Spacer(modifier = Modifier.height(10.dp))
+
+                TextField(
+                    value = age,
+                    onValueChange = { age = it.filter { char -> char.isDigit() } },
+                    label = { Text("Age") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = heightFeet,
+                    onValueChange = { heightFeet = it.filter { char -> char.isDigit() } },
+                    label = { Text("Height (Feet)") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = heightInches,
+                    onValueChange = { newValue ->
+                        val decimalCount = newValue.count { it == '.' }
+                        if (newValue.all { it.isDigit() || it == '.' } && decimalCount <= 1) {
+                            if (newValue.indexOf('.') == -1 || newValue.length - newValue.indexOf('.') - 1 <= 2) {
+                                heightInches = newValue
+                            }
+                        }
+                    },
+                    label = { Text("Height (Inches)") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = weight,
+                    onValueChange = { newValue ->
+                        val decimalCount = newValue.count { it == '.' }
+                        if (newValue.all { it.isDigit() || it == '.' } && decimalCount <= 1) {
+                            if (newValue.indexOf('.') == -1 || newValue.length - newValue.indexOf('.') - 1 <= 2) {
+                                weight = newValue
+                            }
+                        }
+                    },
+                    label = { Text("Weight") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(30.dp))
+                if (errorMessage.isNotEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Red,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+                Button(onClick = {
+                    errorMessage = ""
+                    val ageValue = age.toIntOrNull()
+                    val heightFeetValue = heightFeet.toIntOrNull()
+                    val heightInchesValue = heightInches.toIntOrNull()
+                    val weightValue = weight.toFloatOrNull()
+                    when {
+                        ageValue == null || ageValue < 5 || ageValue > 130 -> {
+                            errorMessage = "This age is invalid!"
+                        }
+                        weightValue == null || weightValue < 20 || weightValue > 1000 -> {
+                            errorMessage = "This weight is invalid!"
+                        }
+                        heightInchesValue != null && heightInchesValue >= 12 -> {
+                            errorMessage = "The amount of inches is invalid!"
+                        }
+                        heightFeetValue == null || heightFeetValue < 2 || heightFeetValue > 12 -> {
+                            errorMessage = "The amount of feet is invalid!"
+                        }
+                        else -> {
+                            onSignUpSuccess()
+                        }
+                    }
+                }) {
+                    Text(text = "Sign Up")
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun App() {
+    TesttTheme {
+        Login(onLoginSuccess = {}, onSignUpSuccess = {}, onGuestLogin = {})
+    }
+}
