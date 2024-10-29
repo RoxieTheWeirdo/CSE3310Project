@@ -304,7 +304,7 @@ fun Login(
                     }
                     else -> {
                         errorMessage = ""
-                        //Add Recovery function, ignore the hidden warning
+                        //Add Recovery functions, ignore the hidden warning
                     }
             }
             }) {
