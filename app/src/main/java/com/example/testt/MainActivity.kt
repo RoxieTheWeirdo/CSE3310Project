@@ -48,14 +48,12 @@ class MainActivity : ComponentActivity() {
             TesttTheme {
                 var screen by remember { mutableStateOf("login") }
                 var userType by remember { mutableStateOf('G') }
-                val bottomNavigationBarHeight = 56.dp //What looks pretty good
                 val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .padding(bottom = bottomPadding + bottomNavigationBarHeight)
+                            .padding(bottom = bottomPadding)
                     ) {
                         when (screen) {
                             "login" -> {
@@ -73,13 +71,13 @@ class MainActivity : ComponentActivity() {
                                         userType = 'G'
                                         screen = "MainMenu"
                                     }
-
                                 )
                             }
                             "SignUp" -> {
                                 SignUp(
                                     modifier = Modifier.fillMaxSize(),
-                                    onSignUpSuccess = { screen = "MainMenu" }
+                                    onSignUpSuccess = { screen = "MainMenu" },
+                                    onBackClick = { screen = "login"},
                                 )
                             }
                             "MainMenu" -> {
@@ -117,7 +115,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                    //The bottom bar
                     if (screen in listOf("MainMenu", "Exercise", "Trainer", "User")) {
                         BottomNavigationBar(
                             currentScreen = screen,
@@ -127,7 +124,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .padding(bottom = bottomPadding)
-                                .height(bottomNavigationBarHeight)
+                                .height(50.dp)
                         )
                     }
                 }
@@ -146,90 +143,174 @@ fun Login(
 ) {
     var user by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var secureAnswer by remember { mutableStateOf("") }
+    var screen by remember { mutableIntStateOf(1) }
+    BackHandler (enabled = screen == 2) {
+        screen = 1
+    }
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxSize()
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.duck),
-                contentDescription = ":/",      //just required :/
-                modifier = Modifier.size(300.dp),
-            )
-            Spacer(modifier = Modifier.height(30.dp))
-            Text(text = "Please enter Username and Password!")
+        if (screen == 1) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.duck),
+                    contentDescription = ":/",      //just required :/
+                    modifier = Modifier.size(300.dp),
+                )
+                Spacer(modifier = Modifier.height(30.dp))
+                Text(text = "Please enter Username and Password!")
+                Spacer(modifier = Modifier.height(10.dp))
+                TextField(
+                    value = user,
+                    onValueChange = { user = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Next
+                    )
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = pass,
+                    onValueChange = { pass = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done
+                    )
+                )
+                val forgot = buildAnnotatedString {
+                    withStyle(
+                        style = SpanStyle(
+                            color = Color.Blue,
+                            textDecoration = TextDecoration.Underline,
+                            fontSize = 16.sp
+                        )
+                    ) {
+                        pushStringAnnotation(tag = "FORGOT", annotation = "")
+                        append("Forgot Password?")
+                        pop()
+                    }
+                }
+                ClickableText(
+                    modifier = Modifier.padding(10.dp),
+                    text = forgot,
+                    onClick = { offset ->
+                        forgot.getStringAnnotations(tag ="FORGOT", start = offset, end = offset)
+                            .firstOrNull()?.let { screen = 2 }
+                    }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { onLoginSuccess() }) {
+                    Text(text = "Log in")
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                val annotatedText = buildAnnotatedString {
+                    append("Or continue as ")
+                    withStyle(
+                        style = SpanStyle(
+                            color = Color.Blue,
+                            textDecoration = TextDecoration.Underline,
+                            fontSize = 16.sp
+                        )
+                    ) {
+                        pushStringAnnotation(tag = "G", annotation = "")
+                        append("Guest")
+                        pop()
+                    }
+                }
+
+                ClickableText(
+                    text = annotatedText,
+                    modifier = Modifier.padding(10.dp),
+                    onClick = { offset ->
+                        annotatedText.getStringAnnotations(tag = "G", start = offset, end = offset)
+                            .firstOrNull()?.let { onGuestLogin() }
+                    }
+                )
+                val newOne = buildAnnotatedString {
+                    append("Don't have an account? ")
+                    withStyle(
+                        style = SpanStyle(
+                            color = Color.Blue,
+                            textDecoration = TextDecoration.Underline,
+                            fontSize = 16.sp
+                        )
+                    ) {
+                        pushStringAnnotation(tag = "NEW", annotation = "")
+                        append("Click here to make one!")
+                        pop()
+                    }
+                }
+
+                ClickableText(
+                    text = newOne,
+                    modifier = Modifier.padding(10.dp),
+                    onClick = { offset ->
+                        newOne.getStringAnnotations(tag = "NEW", start = offset, end = offset)
+                            .firstOrNull()?.let { onSignUpSuccess() }
+                    }
+                )
+            }
+        }
+        else if (screen == 2) {
+            var errorMessage by remember { mutableStateOf("") }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+            Text("Please enter the following credentials")
             Spacer(modifier = Modifier.height(10.dp))
             TextField(
-                value = user,
-                onValueChange = { user = it },
-                label = { Text("Username") },
-                modifier = Modifier.fillMaxWidth(0.8f),
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
                 keyboardOptions = KeyboardOptions.Default.copy(
                     imeAction = ImeAction.Next
-                )
+                ),
+                modifier = Modifier.fillMaxWidth(0.8f)
             )
             Spacer(modifier = Modifier.height(16.dp))
             TextField(
-                value = pass,
-                onValueChange = { pass = it },
-                label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth(0.8f),
-                visualTransformation = PasswordVisualTransformation(),
+                value = secureAnswer,
+                onValueChange = { secureAnswer = it },
+                label = { Text("Answer to Security Question") },
                 keyboardOptions = KeyboardOptions.Default.copy(
                     imeAction = ImeAction.Done
-                )
+                ),
+                modifier = Modifier.fillMaxWidth(0.8f),
+                visualTransformation = PasswordVisualTransformation()
             )
-            Spacer(modifier = Modifier.height(30.dp))
-            Button(onClick = { onLoginSuccess() }) {
-                Text(text = "Log in")
-            }
+                if (errorMessage.isNotEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Red,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
             Spacer(modifier = Modifier.height(16.dp))
-
-            val annotatedText = buildAnnotatedString {
-                append("Or continue as ")
-                withStyle(style = SpanStyle(
-                    color = Color.Blue,
-                    textDecoration = TextDecoration.Underline,
-                    fontSize = 16.sp
-                )) {
-                    pushStringAnnotation(tag = "G", annotation = "")
-                    append("Guest")
-                    pop()
-                }
+            Button(onClick = {
+                when {
+                    email.isEmpty() -> {
+                        errorMessage = "Please enter your account's email!"
+                    }
+                    secureAnswer.isEmpty() -> {
+                        errorMessage = "Please answer the security question!"
+                    }
+                    else -> {
+                        errorMessage = ""
+                        //Add Recovery function, ignore the hidden warning
+                    }
             }
-
-            ClickableText(
-                text = annotatedText,
-                modifier = Modifier.padding(10.dp),
-                onClick = { offset ->
-                    annotatedText.getStringAnnotations(tag = "G", start = offset, end = offset)
-                        .firstOrNull()?.let { onGuestLogin() }
-                }
-            )
-
-            val newOne = buildAnnotatedString {
-                append("Don't have an account? ")
-                withStyle(style = SpanStyle(
-                    color = Color.Blue,
-                    textDecoration = TextDecoration.Underline,
-                    fontSize = 16.sp
-                )) {
-                    pushStringAnnotation(tag = "NEW", annotation = "")
-                    append("Click here to make one!")
-                    pop()
-                }
+            }) {
+                Text(text = "Recover Account")
             }
-
-            ClickableText(
-                text = newOne,
-                modifier = Modifier.padding(10.dp),
-                onClick = { offset ->
-                    newOne.getStringAnnotations(tag = "NEW", start = offset, end = offset)
-                        .firstOrNull()?.let { onSignUpSuccess() }
-                }
-            )
+            }
         }
     }
 }
@@ -495,19 +576,28 @@ fun BottomNavigationBar(
 @Composable
 fun SignUp(
     modifier: Modifier = Modifier,
-    onSignUpSuccess: () -> Unit
+    onSignUpSuccess: () -> Unit,
+    onBackClick: () -> Unit
 ) {
     var user by remember { mutableStateOf("") }
+    var first by remember { mutableStateOf("") }
+    var last by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
     var heightFeet by remember { mutableStateOf("") }
     var heightInches by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var secureAnswer by remember { mutableStateOf("") }
     var screen by remember { mutableIntStateOf(1) }
 
-    // State to hold error messages
     var errorMessage by remember { mutableStateOf("") }
-
+    BackHandler (enabled = screen == 2) {
+        screen = 1
+    }
+    BackHandler (enabled = screen == 1) {
+        onBackClick()
+    }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier.fillMaxSize()
@@ -516,7 +606,7 @@ fun SignUp(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (screen == 1) {
-                Text("Please enter Username and Password!")
+                Text("Please enter the following credentials")
                 Spacer(modifier = Modifier.height(10.dp))
                 TextField(
                     value = user,
@@ -533,20 +623,83 @@ fun SignUp(
                     onValueChange = { pass = it },
                     label = { Text("Password") },
                     keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    visualTransformation = PasswordVisualTransformation()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = first,
+                    onValueChange = { first = it },
+                    label = { Text("First Name") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = last,
+                    onValueChange = { last = it },
+                    label = { Text("Last Name") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
                         imeAction = ImeAction.Done
                     ),
                     modifier = Modifier.fillMaxWidth(0.8f),
                     visualTransformation = PasswordVisualTransformation()
                 )
                 Spacer(modifier = Modifier.height(30.dp))
-                Button(onClick = {screen = 2}) {
+                if (errorMessage.isNotEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Red,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+                Button(onClick = {
+                    if (user.isEmpty()) {
+                        errorMessage = "Please enter a username!"
+                    }
+                    else if (user.length < 6) {
+                        errorMessage = "Username must be at least 6 characters long!"
+                    }
+                    else if (pass.isEmpty()) {
+                        errorMessage = "Please enter a password!"
+                    }
+                    else if (pass.length < 8 || !pass.any { it.isLetterOrDigit().not() }) {
+                        errorMessage = "Password must be 8 characters and contain at least 1 special character!"
+                    }
+                    else if (first.isEmpty()) {
+                        errorMessage = "Please enter a first name!"
+                    }
+                    else if (last.isEmpty()) {
+                        errorMessage = "Please enter a last name!"
+                    }
+                    else if (email.isEmpty()) {
+                        errorMessage = "Please enter an email!"
+                    }
+                    else {
+                        errorMessage = ""
+                        screen = 2
+                    }
+                }) {
                     Text(text = "Next")
                 }
             }
             else {
                 Text("Please enter your Age, Height, and Weight!")
                 Spacer(modifier = Modifier.height(10.dp))
-
                 TextField(
                     value = age,
                     onValueChange = { age = it.filter { char -> char.isDigit() } },
@@ -572,11 +725,8 @@ fun SignUp(
                 TextField(
                     value = heightInches,
                     onValueChange = { newValue ->
-                        val decimalCount = newValue.count { it == '.' }
-                        if (newValue.all { it.isDigit() || it == '.' } && decimalCount <= 1) {
-                            if (newValue.indexOf('.') == -1 || newValue.length - newValue.indexOf('.') - 1 <= 2) {
-                                heightInches = newValue
-                            }
+                        if (newValue.all { it.isDigit() || it == '.' }) {
+                            heightInches = newValue
                         }
                     },
                     label = { Text("Height (Inches)") },
@@ -590,19 +740,29 @@ fun SignUp(
                 TextField(
                     value = weight,
                     onValueChange = { newValue ->
-                        val decimalCount = newValue.count { it == '.' }
-                        if (newValue.all { it.isDigit() || it == '.' } && decimalCount <= 1) {
-                            if (newValue.indexOf('.') == -1 || newValue.length - newValue.indexOf('.') - 1 <= 2) {
-                                weight = newValue
-                            }
+                        if (newValue.all { it.isDigit() || it == '.' }) {
+                            weight = newValue
                         }
                     },
                     label = { Text("Weight") },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
+                        imeAction = ImeAction.Next
                     ),
                     modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "What city were you born in?")
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = secureAnswer,
+                    onValueChange = { secureAnswer = it },
+                    label = { Text("Answer to Security Question") },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    visualTransformation = PasswordVisualTransformation()
                 )
                 Spacer(modifier = Modifier.height(30.dp))
                 if (errorMessage.isNotEmpty()) {
@@ -613,25 +773,29 @@ fun SignUp(
                     )
                 }
                 Button(onClick = {
-                    errorMessage = ""
                     val ageValue = age.toIntOrNull()
                     val heightFeetValue = heightFeet.toIntOrNull()
-                    val heightInchesValue = heightInches.toIntOrNull()
+                    val heightInchesValue = heightInches.toFloatOrNull()
                     val weightValue = weight.toFloatOrNull()
+                    errorMessage = ""
                     when {
-                        ageValue == null || ageValue < 5 || ageValue > 130 -> {
+                        ageValue == null || ageValue < 1 || ageValue > 120 -> {
                             errorMessage = "This age is invalid!"
                         }
-                        weightValue == null || weightValue < 20 || weightValue > 1000 -> {
-                            errorMessage = "This weight is invalid!"
-                        }
-                        heightInchesValue != null && heightInchesValue >= 12 -> {
-                            errorMessage = "The amount of inches is invalid!"
-                        }
-                        heightFeetValue == null || heightFeetValue < 2 || heightFeetValue > 12 -> {
+                        heightFeetValue == null || heightFeetValue < 1 || heightFeetValue > 12 -> {
                             errorMessage = "The amount of feet is invalid!"
                         }
+                        heightInchesValue == null || heightInchesValue < 0 || heightInchesValue >= 12 -> {
+                            errorMessage = "The amount of inches is invalid!"
+                        }
+                        weightValue == null || weightValue < 20 || weightValue > 700 -> {
+                            errorMessage = "This weight is invalid!"
+                        }
+                        secureAnswer.isEmpty() -> {
+                            errorMessage = "Please answer the security question!"
+                        }
                         else -> {
+                            errorMessage = ""
                             onSignUpSuccess()
                         }
                     }
