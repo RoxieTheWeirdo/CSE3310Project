@@ -1,6 +1,7 @@
 package com.example.testt
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -39,7 +40,117 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import android.content.ContentValues
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+import androidx.compose.ui.platform.LocalContext
+data class UserInfo(
+    val user: String,
+    val pass: String,
+    val firstName: String,
+    val lastName: String,
+    val email: String,
+    val age: Int,
+    val weight: Float,
+    val heightFt: Int,
+    val heightIn: Float,
+    val answer: String,
+    val usertype: String
+)
+object GlobalUserInfo {
+    var userInfo: UserInfo? = null
+}
+class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db", null, 1) {
+    override fun onCreate(db: SQLiteDatabase) {
+        val createTable = """
+            CREATE TABLE Users (
+                User TEXT PRIMARY KEY,
+                Pass TEXT NOT NULL,
+                First TEXT,
+                Last TEXT,
+                Email TEXT UNIQUE,
+                Age INTEGER,
+                HeightFt INTEGER,
+                HeightIn REAL,
+                Weight REAL,
+                Answer TEXT,
+                USERTYPE TEXT
+            )
+        """.trimIndent()
+        db.execSQL(createTable)
+    }
 
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL("DROP TABLE IF EXISTS Users")
+        onCreate(db)
+    }
+
+    fun addUser(
+        user: String, pass: String, first: String, last: String, email: String,
+        age: Int, heightFt: Int, heightIn: Float, weight: Float, answer: String,
+        userType: String
+    ): Boolean {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("User", user)
+            put("Pass", pass)
+            put("First", first)
+            put("Last", last)
+            put("Email", email)
+            put("Age", age)
+            put("HeightFt", heightFt)
+            put("HeightIn", heightIn)
+            put("Weight", weight)
+            put("Answer", answer)
+            put("UserType", userType)
+        }
+        val result = db.insert("Users", null, values)
+        db.close()
+        return result != -1L
+    }
+    fun validateLogin(username: String, password: String): Boolean {
+        val db = readableDatabase
+        val query = "SELECT * FROM Users WHERE User = ? AND Pass = ?"
+        val cursor = db.rawQuery(query, arrayOf(username, password))
+        val isValid = cursor.count > 0
+        cursor.close()
+        db.close()
+        return isValid
+    }
+    fun getUserInfo(username: String, password: String): UserInfo? {
+        val db = readableDatabase
+        val query = """
+        SELECT User, Pass, First, Last, Email, Age, Weight, HeightFt, HeightIn, Answer, USERTYPE
+        FROM Users WHERE User = ? AND Pass = ?
+    """
+        val cursor = db.rawQuery(query, arrayOf(username, password))
+
+        return if (cursor.moveToFirst()) {
+            val user = cursor.getString(cursor.getColumnIndexOrThrow("User"))
+            val pass = cursor.getString(cursor.getColumnIndexOrThrow("Pass"))
+            val firstName = cursor.getString(cursor.getColumnIndexOrThrow("First"))
+            val lastName = cursor.getString(cursor.getColumnIndexOrThrow("Last"))
+            val email = cursor.getString(cursor.getColumnIndexOrThrow("Last"))
+            val age = cursor.getInt(cursor.getColumnIndexOrThrow("Age"))
+            val weight = cursor.getFloat(cursor.getColumnIndexOrThrow("Weight"))
+            val heightFt = cursor.getInt(cursor.getColumnIndexOrThrow("HeightFt"))
+            val heightIn = cursor.getFloat(cursor.getColumnIndexOrThrow("HeightIn"))
+            val answer = cursor.getString(cursor.getColumnIndexOrThrow("Answer"))
+            val usertype = cursor.getString(cursor.getColumnIndexOrThrow("UserType"))
+            cursor.close()
+            db.close()
+            UserInfo(user, pass,firstName, lastName, email, age, weight, heightFt, heightIn, answer, usertype)
+        } else {
+            cursor.close()
+            db.close()
+            null
+        }
+    }
+}
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +158,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TesttTheme {
                 var screen by remember { mutableStateOf("login") }
-                var userType by remember { mutableStateOf('G') }
+                var userType by remember { mutableStateOf("G") }
                 val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(
@@ -60,15 +171,15 @@ class MainActivity : ComponentActivity() {
                                 Login(
                                     modifier = Modifier.fillMaxSize(),
                                     onLoginSuccess = {
-                                        userType = 'U'
+                                        userType = "U"
                                         screen = "MainMenu"
                                     },
                                     onSignUpSuccess = {
-                                        userType = 'U'
+                                        userType = "U"
                                         screen = "SignUp"
                                                       },
                                     onGuestLogin = {
-                                        userType = 'G'
+                                        userType = "G"
                                         screen = "MainMenu"
                                     }
                                 )
@@ -84,7 +195,6 @@ class MainActivity : ComponentActivity() {
                                 MainMenu(
                                     modifier = Modifier.fillMaxSize(),
                                     onSwipeRight = { screen = "Exercise" },
-                                    userType = userType
                                 )
                             }
                             "Exercise" -> {
@@ -101,7 +211,6 @@ class MainActivity : ComponentActivity() {
                                     onSwipeLeft = { screen = "Exercise" },
                                     onSwipeRight = { screen = "User" },
                                     onMainMenu = { screen = "MainMenu"},
-                                    userType = userType
                                 )
                             }
                             "User" -> {
@@ -110,7 +219,6 @@ class MainActivity : ComponentActivity() {
                                     onSwipeLeft = { screen = "Trainer" },
                                     onMainMenu = { screen = "MainMenu"},
                                     onBackClick = { screen = "login"},
-                                    userType = userType
                                 )
                             }
                         }
@@ -146,6 +254,9 @@ fun Login(
     var email by remember { mutableStateOf("") }
     var secureAnswer by remember { mutableStateOf("") }
     var screen by remember { mutableIntStateOf(1) }
+    val context = LocalContext.current
+    val dbHelper = DatabaseHelper(context)
+    var errorMessage by remember { mutableStateOf("") }
     BackHandler (enabled = screen == 2) {
         screen = 1
     }
@@ -207,8 +318,36 @@ fun Login(
                     }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { onLoginSuccess() }) {
+                Button(onClick = {
+                    if (user.isNotEmpty() && pass.isNotEmpty()) {
+                        val isValid = dbHelper.validateLogin(user, pass)
+                        if (isValid) {
+                            val userInfo = dbHelper.getUserInfo(user, pass)
+                            if (userInfo != null) {
+                                GlobalUserInfo.userInfo = userInfo
+                                onLoginSuccess()
+                            }
+                            else {
+                                errorMessage = "Error retrieving user data!"
+                            }
+                        }
+                        else {
+                            errorMessage = "Invalid username or password!"
+                        }
+                    }
+                    else {
+                        errorMessage = "Please enter both username and password!"
+                    }
+                }) {
                     Text(text = "Log in")
+                }
+
+                if (errorMessage.isNotEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Red,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 val annotatedText = buildAnnotatedString {
@@ -260,7 +399,6 @@ fun Login(
             }
         }
         else if (screen == 2) {
-            var errorMessage by remember { mutableStateOf("") }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -319,8 +457,8 @@ fun Login(
 fun MainMenu(
     modifier: Modifier = Modifier,
     onSwipeRight: () -> Unit,
-    userType: Char
 ) {
+    val userInfo = GlobalUserInfo.userInfo
     BackHandler(enabled = true) {/*This does nothing (No backwards press here)*/}
     Box(
         modifier = modifier
@@ -335,7 +473,7 @@ fun MainMenu(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (userType == 'G') {
+            if (userInfo == null) {
                 Text(text = "You are currently a guest!")
                 Spacer(modifier = Modifier.height(30.dp))
             }
@@ -356,6 +494,7 @@ fun ExerciseScreen(
     BackHandler {
         onMainMenu()
     }
+    val userInfo = GlobalUserInfo.userInfo
     Box(
         modifier = modifier
             .pointerInput(Unit) {
@@ -390,11 +529,12 @@ fun ExerciseScreen(
             }
             Spacer(modifier = Modifier.height(30.dp))
         }
+        if (userInfo != null && userInfo.usertype != "G")
         Button(
             onClick = {},
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 20.dp)
+                .padding(bottom = 45.dp)
         ) {
             Text(text = "Special Video")
         }
@@ -408,10 +548,11 @@ fun TrainerScreen(
     onSwipeLeft: () -> Unit,
     onMainMenu: () -> Unit,
     onSwipeRight: () -> Unit,
-    userType: Char,
 ) {
     var screen by remember {mutableIntStateOf(1)}
     var review by remember {mutableStateOf((""))}
+    var starRating by remember { mutableIntStateOf(5) } // Default to 5 stars
+    val userInfo = GlobalUserInfo.userInfo
     BackHandler(enabled = screen == 2) {
         screen = 1
     }
@@ -432,10 +573,10 @@ fun TrainerScreen(
             },
         contentAlignment = Alignment.Center
     ) {         ///Need to update the below once we get paid users
-        if (userType == 'G') {
-            Text(text = "This is for users only!")
+        if (userInfo == null) {
+            Text(text = "This is for premium users only!")
         }
-        if (screen == 1 && userType != 'G') {
+        else if (screen == 1 && userInfo.usertype != "G") {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Button(onClick = {}) {
                     Text(text = "View Workout Goals")
@@ -445,13 +586,33 @@ fun TrainerScreen(
                 onClick = {screen = 2},
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(20.dp)
+                    .padding(45.dp)
             ) {
                 Text(text = "Review Trainer")
             }
         }
-        else if (screen == 2 && userType != 'G') {
+        else if (screen == 2 && userInfo.usertype != "G") {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    for (i in 1..5) {
+                        Icon(
+                            imageVector = if (i <= starRating) Icons.Filled.Star else Icons.Outlined.Star,
+                            contentDescription = "Star $i",
+                            tint = if (i <= starRating) Color.Yellow else Color.Gray,
+                            modifier = Modifier
+                                .size(55.dp)
+                                .clickable { starRating = i }
+                                .padding(horizontal = 4.dp)
+                        )
+
+                    }
+                }
+                //Text(text = "$starRating") test to see star rating
                 Text(text = "Write what you think about your trainer\nYour trainer will not know it's from you\n")
                 TextField(
                     value = review,
@@ -463,7 +624,7 @@ fun TrainerScreen(
             Button(onClick = {},
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(20.dp)
+                    .padding(45.dp)
             ) {
                 Text(text = "Submit Review")
             }
@@ -477,8 +638,8 @@ fun SettingsScreen(
     onSwipeLeft: () -> Unit,
     onMainMenu: () -> Unit,
     onBackClick: () -> Unit,
-    userType: Char
 ) {
+    val userInfo = GlobalUserInfo.userInfo
     var screen by remember { mutableIntStateOf(1)}
     BackHandler (enabled = screen == 1){
         onMainMenu()
@@ -500,7 +661,16 @@ fun SettingsScreen(
     ) {
         if (screen == 1) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (userType != 'G') {
+
+                if (userInfo != null && userInfo.usertype != "G") {
+                    Text(
+                        text = "Age: ${userInfo.age}\tWeight: ${userInfo.weight}lbs",
+                        modifier = Modifier.padding(16.dp)
+                    )
+                    Text(
+                        text = "Height: ${userInfo.heightFt}'${userInfo.heightIn}''",
+                        modifier = Modifier.padding(16.dp)
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(onClick = {}) {
                         Text(text = "Upgrade to premium")
@@ -521,7 +691,10 @@ fun SettingsScreen(
             }
         }
         if (screen == 2) {
-            Button(onClick = {onBackClick() }) {
+            Button(onClick = {
+                GlobalUserInfo.userInfo = null
+                onBackClick() })
+            {
                 Text(text = "Log out")
             }
         }
@@ -590,7 +763,7 @@ fun SignUp(
     var email by remember { mutableStateOf("") }
     var secureAnswer by remember { mutableStateOf("") }
     var screen by remember { mutableIntStateOf(1) }
-
+    val context = LocalContext.current
     var errorMessage by remember { mutableStateOf("") }
     BackHandler (enabled = screen == 2) {
         screen = 1
@@ -796,7 +969,31 @@ fun SignUp(
                         }
                         else -> {
                             errorMessage = ""
-                            onSignUpSuccess()
+                            val dbHelper = DatabaseHelper(context)
+                            val userType = "U"
+                            val isInserted = dbHelper.addUser(
+                                user = user,
+                                pass = pass,
+                                first = first,
+                                last = last,
+                                email = email,
+                                age = ageValue,
+                                heightFt = heightFeetValue,
+                                heightIn = heightInchesValue,
+                                weight = weightValue,
+                                answer = secureAnswer,
+                                userType = userType
+                            )
+
+                            if (isInserted) {
+                                val userInfo = dbHelper.getUserInfo(user, pass)
+                                if (userInfo != null) {
+                                    GlobalUserInfo.userInfo = userInfo
+                                    onSignUpSuccess()
+                                }
+                            } else {
+                                errorMessage = "Could not make new user!"
+                            }
                         }
                     }
                 }) {
@@ -811,6 +1008,7 @@ fun SignUp(
 @Composable
 fun App() {
     TesttTheme {
+        Log.d("TAG", "Starting Log")
         Login(onLoginSuccess = {}, onSignUpSuccess = {}, onGuestLogin = {})
     }
 }
