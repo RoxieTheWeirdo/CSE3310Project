@@ -19,7 +19,6 @@ android {
             useSupportLibrary = true
         }
     }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -37,6 +36,7 @@ android {
         jvmTarget = "1.8"
     }
     buildFeatures {
+        viewBinding = true
         compose = true
     }
     composeOptions {
@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -71,4 +72,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
     implementation("com.microsoft.sqlserver:mssql-jdbc:10.2.0.jre8")
+    implementation("com.google.android.gms:play-services-ads:23.5.0")
+    implementation("androidx.appcompat:appcompat:1.3.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.0.4")
+    implementation("com.google.android.gms:play-services-ads:23.5.0")
+    implementation("com.google.android.ump:user-messaging-platform:3.1.0")
+    implementation("androidx.datastore:datastore-core-android:1.1.1")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7")
+    implementation(kotlin("script-runtime"))
 }

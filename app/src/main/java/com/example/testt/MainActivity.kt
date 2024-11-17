@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,9 +44,14 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.layout.ContentScale
+
 data class UserInfo(
     val user: String,
     val pass: String,
@@ -61,6 +65,133 @@ data class UserInfo(
     val answer: String,
     val usertype: String
 )
+data class ExAd(
+    val Id: Int,
+    val url: String,
+)
+val pileofAds = listOf(
+    ExAd(
+        Id = R.drawable.la,
+        url = "https://www.google.com/maps/search/LA+Fitness/@32.6817147,-97.2619051,12z/data=!3m1!4b1?entry=ttu&g_ep=EgoyMDI0MTExMy4xIKXMDSoASAFQAw%3D%3D",
+    ),
+    ExAd(
+        Id = R.drawable.shakeitup,
+        url = "https://www.amazon.com/whey-protein-shake/s?k=whey+protein+shake"
+    ),
+    ExAd(
+        Id = R.drawable.egg,
+        url = "https://www.3gcardio.com/elite-runner-treadmill-is-commercial-quality/"
+    ),
+    ExAd(
+        Id = R.drawable.joinus,
+        url = "https://fitnessconnection.com/gyms/arlington"
+    ),
+    ExAd(
+        Id = R.drawable.amazon,
+        url = "https://www.amazon.com/Signature-Fitness-Neoprene-Anti-Slip-Anti-roll/dp/B0CCK5MNRN?crid=18I4UE785TRF9&dib=eyJ2IjoiMSJ9.9AEalanbV_Sjz-nKmlGYbjyz2Dbt2Ar9lFXnBTjcaUfv-7me3wKqiFStiToZxBG_3VocPUWXfGmNPhUdQMQLAyhSK2Ex9STxeA80vdrpzH_PhoJxOyeaBFQtkgWJXyTrsi6I-cSg8uvSMv0Wsw2c4i1H98iMz0jSRmwjQKYosnc9Mwgx1k0FAbBaedtvmvBlOLqQ75hTR96QQ99me_3iYko99LIozcicoSUuWkNKKsf9x5RKkqwEgmLMaBSoBzyf3ufDCb0iJdEwLx_1ESsvgX1dFiY5qtdqxDo7eMmnKT0.HoaxChMg1eDHwfP9XOh00X2ydqqV8Da49939nyLUpQM&dib_tag=se&keywords=Dumb%2Bbells&sprefix=dumb%2Bbel%2Caps%2C517&sr=8-15&th=1"
+    )
+)
+data class InAd(
+    val title: String,
+    val imageResId: Int,
+    val onAdClick: () -> Unit
+)
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            TesttTheme {
+                var screen by remember { mutableStateOf("login") }
+                var userType by remember { mutableStateOf("G") }
+                val bottomPadding =
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(bottom = bottomPadding)
+                    ) {
+                        when (screen) {
+                            "login" -> {
+                                Login(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onLoginSuccess = {
+                                        userType = "U"
+                                        screen = "MainMenu"
+                                    },
+                                    onSignUpSuccess = {
+                                        userType = "U"
+                                        screen = "SignUp"
+                                    },
+                                    onGuestLogin = {
+                                        userType = "G"
+                                        screen = "MainMenu"
+                                    }
+                                )
+                            }
+
+                            "SignUp" -> {
+                                SignUp(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSignUpSuccess = { screen = "MainMenu" },
+                                    onBackClick = { screen = "login" },
+                                )
+                            }
+
+                            "MainMenu" -> {
+                                MainMenu(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSwipeRight = { screen = "Exercise" },
+                                )
+                            }
+
+                            "Exercise" -> {
+                                ExerciseScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSwipeLeft = { screen = "MainMenu" },
+                                    onSwipeRight = { screen = "Trainer" },
+                                    onMainMenu = { screen = "MainMenu" },
+                                    onToSettings = { screen = "User" }
+                                )
+                            }
+
+                            "Trainer" -> {
+                                TrainerScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSwipeLeft = { screen = "Exercise" },
+                                    onSwipeRight = { screen = "User" },
+                                    onMainMenu = { screen = "MainMenu" },
+                                )
+                            }
+
+                            "User" -> {
+                                SettingsScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                    onSwipeLeft = { screen = "Trainer" },
+                                    onMainMenu = { screen = "MainMenu" },
+                                    onBackClick = { screen = "login" },
+                                )
+                            }
+                        }
+                    }
+
+                    // Bottom navigation bar for the main screens
+                    if (screen in listOf("MainMenu", "Exercise", "Trainer", "User")) {
+                        BottomNavigationBar(
+                            currentScreen = screen,
+                            onScreenSelected = { newScreen -> screen = newScreen },
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = bottomPadding)
+                                .height(50.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 object GlobalUserInfo {
     var userInfo: UserInfo? = null
 }
@@ -78,17 +209,41 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
                 HeightIn REAL,
                 Weight REAL,
                 Answer TEXT,
-                USERTYPE TEXT
+                UserType TEXT
             )
         """.trimIndent()
         db.execSQL(createTable)
     }
+    fun getUsersByType(userType: String): List<UserInfo> {
+        val db = readableDatabase
+        val query = "SELECT * FROM Users WHERE UserType = ?"
+        val cursor = db.rawQuery(query, arrayOf(userType))
 
+        val users = mutableListOf<UserInfo>()
+        while (cursor.moveToNext()) {
+            val user = cursor.getString(cursor.getColumnIndexOrThrow("User"))
+            val pass = cursor.getString(cursor.getColumnIndexOrThrow("Pass"))
+            val firstName = cursor.getString(cursor.getColumnIndexOrThrow("First"))
+            val lastName = cursor.getString(cursor.getColumnIndexOrThrow("Last"))
+            val email = cursor.getString(cursor.getColumnIndexOrThrow("Email"))
+            val age = cursor.getInt(cursor.getColumnIndexOrThrow("Age"))
+            val weight = cursor.getFloat(cursor.getColumnIndexOrThrow("Weight"))
+            val heightFt = cursor.getInt(cursor.getColumnIndexOrThrow("HeightFt"))
+            val heightIn = cursor.getFloat(cursor.getColumnIndexOrThrow("HeightIn"))
+            val answer = cursor.getString(cursor.getColumnIndexOrThrow("Answer"))
+            val usertype = cursor.getString(cursor.getColumnIndexOrThrow("UserType"))
+
+            users.add(UserInfo(user, pass, firstName, lastName, email, age, weight, heightFt, heightIn, answer, usertype))
+        }
+        cursor.close()
+        db.close()
+
+        return users
+    }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS Users")
         onCreate(db)
     }
-
     fun addUser(
         user: String, pass: String, first: String, last: String, email: String,
         age: Int, heightFt: Int, heightIn: Float, weight: Float, answer: String,
@@ -124,7 +279,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
     fun getUserInfo(username: String, password: String): UserInfo? {
         val db = readableDatabase
         val query = """
-        SELECT User, Pass, First, Last, Email, Age, Weight, HeightFt, HeightIn, Answer, USERTYPE
+        SELECT User, Pass, First, Last, Email, Age, Weight, HeightFt, HeightIn, Answer, UserType
         FROM Users WHERE User = ? AND Pass = ?
     """
         val cursor = db.rawQuery(query, arrayOf(username, password))
@@ -148,95 +303,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
             cursor.close()
             db.close()
             null
-        }
-    }
-}
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            TesttTheme {
-                var screen by remember { mutableStateOf("login") }
-                var userType by remember { mutableStateOf("G") }
-                val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .padding(bottom = bottomPadding)
-                    ) {
-                        when (screen) {
-                            "login" -> {
-                                Login(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onLoginSuccess = {
-                                        userType = "U"
-                                        screen = "MainMenu"
-                                    },
-                                    onSignUpSuccess = {
-                                        userType = "U"
-                                        screen = "SignUp"
-                                                      },
-                                    onGuestLogin = {
-                                        userType = "G"
-                                        screen = "MainMenu"
-                                    }
-                                )
-                            }
-                            "SignUp" -> {
-                                SignUp(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onSignUpSuccess = { screen = "MainMenu" },
-                                    onBackClick = { screen = "login"},
-                                )
-                            }
-                            "MainMenu" -> {
-                                MainMenu(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onSwipeRight = { screen = "Exercise" },
-                                )
-                            }
-                            "Exercise" -> {
-                                ExerciseScreen(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onSwipeLeft = { screen = "MainMenu" },
-                                    onSwipeRight = { screen = "Trainer" },
-                                    onMainMenu = { screen = "MainMenu"}
-                                )
-                            }
-                            "Trainer" -> {
-                                TrainerScreen(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onSwipeLeft = { screen = "Exercise" },
-                                    onSwipeRight = { screen = "User" },
-                                    onMainMenu = { screen = "MainMenu"},
-                                )
-                            }
-                            "User" -> {
-                                SettingsScreen(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onSwipeLeft = { screen = "Trainer" },
-                                    onMainMenu = { screen = "MainMenu"},
-                                    onBackClick = { screen = "login"},
-                                )
-                            }
-                        }
-                    }
-                    if (screen in listOf("MainMenu", "Exercise", "Trainer", "User")) {
-                        BottomNavigationBar(
-                            currentScreen = screen,
-                            onScreenSelected = { newScreen ->
-                                screen = newScreen
-                            },
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = bottomPadding)
-                                .height(50.dp)
-                        )
-                    }
-                }
-            }
         }
     }
 }
@@ -452,6 +518,29 @@ fun Login(
         }
     }
 }
+@Composable
+fun AdView(ad: ExAd, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color.LightGray)
+            .clickable {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ad.url))
+                context.startActivity(intent)
+            }
+    ) {
+        Image(
+            painter = painterResource(id = ad.Id),
+            contentDescription = ":/",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
 
 @Composable
 fun MainMenu(
@@ -459,52 +548,96 @@ fun MainMenu(
     onSwipeRight: () -> Unit,
 ) {
     val userInfo = GlobalUserInfo.userInfo
-    BackHandler(enabled = true) {/*This does nothing (No backwards press here)*/}
-    Box(
+    BackHandler(enabled = true) { /* This does nothing (No back press here) */ }
+    val randomAd = remember { pileofAds.random() }
+    Column(
         modifier = modifier
+            .fillMaxSize()
             .pointerInput(Unit) {
                 detectHorizontalDragGestures { change, dragAmount ->
                     change.consume()
-                    if (dragAmount < -50) {
+                    if (dragAmount < -35) {
                         onSwipeRight()
                     }
                 }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (userInfo == null) {
-                Text(text = "You are currently a guest!")
-                Spacer(modifier = Modifier.height(30.dp))
             }
-            Text(text = "Main Menu")
-            Spacer(modifier = Modifier.height(30.dp))
-            Text(text = "Things like graphs an charts will go here!")
+    ) {
+        AdView(ad = randomAd, modifier = Modifier.padding(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (userInfo == null) {
+                    Text(text = "You are currently a guest!")
+                    Spacer(modifier = Modifier.height(30.dp))
+                }
+                Text(text = "Main Menu")
+                Spacer(modifier = Modifier.height(30.dp))
+                Text(text = "Things like graphs and charts will go here!")
+            }
         }
     }
 }
-
+fun getRandomClassAd(users: List<UserInfo>, onNavigateToSettings: () -> Unit): InAd? {
+    val teachers = users.filter { it.usertype == "U" } // Change this back to "T" when trainers exist!
+    if (teachers.isEmpty()) {
+        return null
+    }
+    val randomTeacher = teachers.random()
+    return InAd(
+        title = "Join ${randomTeacher.firstName}'s class!",
+        imageResId = R.drawable.oh,
+        onAdClick = onNavigateToSettings
+    )
+}
+@Composable
+fun ExerciseAdView(ad: InAd, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color.LightGray)
+            .clickable { ad.onAdClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Image(
+                painter = painterResource(id = ad.imageResId),
+                contentDescription = ":/",
+                modifier = Modifier
+                    .size(60.dp),
+                contentScale = ContentScale.Crop
+            )
+            Text(
+                text = ad.title,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
 @Composable
 fun ExerciseScreen(
     modifier: Modifier = Modifier,
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
-    onMainMenu: () -> Unit
+    onMainMenu: () -> Unit,
+    onToSettings: () -> Unit
 ) {
-    BackHandler {
-        onMainMenu()
-    }
-    val userInfo = GlobalUserInfo.userInfo
+    val context = LocalContext.current
+    val dbHelper = DatabaseHelper(context)
+    val users = dbHelper.getUsersByType("U")
+    BackHandler { onMainMenu() }
+    val ad = getRandomClassAd(users, onToSettings)
     Box(
         modifier = modifier
             .pointerInput(Unit) {
                 detectHorizontalDragGestures { change, dragAmount ->
                     change.consume()
-                    if (dragAmount > 50) {
-                        onSwipeLeft()
-                    } else if (dragAmount < -50) {
-                        onSwipeRight()
-                    }
+                    if (dragAmount > 35) onSwipeLeft() else if (dragAmount < -35) onSwipeRight()
                 }
             }
     ) {
@@ -512,24 +645,15 @@ fun ExerciseScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize()
         ) {
+            ad?.let { ExerciseAdView(ad = it, modifier = Modifier.padding(8.dp)) }
             Spacer(modifier = Modifier.height(30.dp))
-
-            Button(onClick = {}) {
-                Text(text = "Track Workout")
-            }
+            Button(onClick = {}) { Text(text = "Track Workout") }
             Spacer(modifier = Modifier.height(30.dp))
-
-            Button(onClick = {}) {
-                Text(text = "Log Workout")
-            }
+            Button(onClick = {}) { Text(text = "Log Workout") }
             Spacer(modifier = Modifier.height(30.dp))
-
-            Button(onClick = {}) {
-                Text(text = "Change Goals")
-            }
+            Button(onClick = {}) { Text(text = "Change Goals") }
             Spacer(modifier = Modifier.height(30.dp))
         }
-        if (userInfo != null && userInfo.usertype != "G")
         Button(
             onClick = {},
             modifier = Modifier
