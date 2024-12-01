@@ -63,7 +63,8 @@ data class UserInfo(
     val heightFt: Int,
     val heightIn: Float,
     val answer: String,
-    val usertype: String
+    val usertype: String,
+    var isPremium: Boolean
 )
 data class ExAd(
     val Id: Int,
@@ -209,7 +210,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
                 HeightIn REAL,
                 Weight REAL,
                 Answer TEXT,
-                UserType TEXT
+                UserType TEXT,
+                IsPremium INTEGER DEFAULT 0
             )
         """.trimIndent()
         db.execSQL(createTable)
@@ -232,8 +234,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
             val heightIn = cursor.getFloat(cursor.getColumnIndexOrThrow("HeightIn"))
             val answer = cursor.getString(cursor.getColumnIndexOrThrow("Answer"))
             val usertype = cursor.getString(cursor.getColumnIndexOrThrow("UserType"))
+            val isPremium = cursor.getInt(cursor.getColumnIndexOrThrow("IsPremium")) == 1 //
 
-            users.add(UserInfo(user, pass, firstName, lastName, email, age, weight, heightFt, heightIn, answer, usertype))
+            users.add(UserInfo(user, pass, firstName, lastName, email, age, weight, heightFt, heightIn, answer, usertype, isPremium))
         }
         cursor.close()
         db.close()
@@ -247,7 +250,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
     fun addUser(
         user: String, pass: String, first: String, last: String, email: String,
         age: Int, heightFt: Int, heightIn: Float, weight: Float, answer: String,
-        userType: String
+        userType: String, isPremium: Boolean
     ): Boolean {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -262,10 +265,20 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
             put("Weight", weight)
             put("Answer", answer)
             put("UserType", userType)
+            put("IsPremium", if (isPremium) 1 else 0)
         }
         val result = db.insert("Users", null, values)
         db.close()
         return result != -1L
+    }
+    fun updateSubscriptionStatus(username: String, isPremium: Boolean): Boolean {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("IsPremium", if (isPremium) 1 else 0)
+        }
+        val rowsAffected = db.update("Users", values, "User = ?", arrayOf(username))
+        db.close()
+        return rowsAffected > 0
     }
     fun validateLogin(username: String, password: String): Boolean {
         val db = readableDatabase
@@ -279,7 +292,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
     fun getUserInfo(username: String, password: String): UserInfo? {
         val db = readableDatabase
         val query = """
-        SELECT User, Pass, First, Last, Email, Age, Weight, HeightFt, HeightIn, Answer, UserType
+        SELECT User, Pass, First, Last, Email, Age, Weight, HeightFt, HeightIn, Answer, UserType, IsPremium
         FROM Users WHERE User = ? AND Pass = ?
     """
         val cursor = db.rawQuery(query, arrayOf(username, password))
@@ -296,9 +309,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "USERINFO.db"
             val heightIn = cursor.getFloat(cursor.getColumnIndexOrThrow("HeightIn"))
             val answer = cursor.getString(cursor.getColumnIndexOrThrow("Answer"))
             val usertype = cursor.getString(cursor.getColumnIndexOrThrow("UserType"))
+            val isPremium = cursor.getInt(cursor.getColumnIndexOrThrow("IsPremium")) == 1
             cursor.close()
             db.close()
-            UserInfo(user, pass,firstName, lastName, email, age, weight, heightFt, heightIn, answer, usertype)
+            UserInfo(user, pass,firstName, lastName, email, age, weight, heightFt, heightIn, answer, usertype, isPremium)
         } else {
             cursor.close()
             db.close()
@@ -643,17 +657,80 @@ fun ExerciseScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().padding(30.dp)
         ) {
             ad?.let { ExerciseAdView(ad = it, modifier = Modifier.padding(8.dp)) }
-            Spacer(modifier = Modifier.height(30.dp))
-            Button(onClick = {}) { Text(text = "Track Workout") }
-            Spacer(modifier = Modifier.height(30.dp))
-            Button(onClick = {}) { Text(text = "Log Workout") }
-            Spacer(modifier = Modifier.height(30.dp))
-            Button(onClick = {}) { Text(text = "Change Goals") }
-            Spacer(modifier = Modifier.height(30.dp))
+            Text(text = "Track Activity", style = MaterialTheme.typography.headlineSmall)
+            Spacer(modifier = Modifier.height(16.dp))
+
+
+            Column(horizontalAlignment = Alignment.Start) {
+                Button(onClick = {
+
+                },
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "Running")
+
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = {
+
+                },
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "Walking")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = {
+
+                },
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "Cycling")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = {
+
+                },
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "Yoga")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = {
+
+                },
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "High-intensity interval training (HIIT)")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = {
+
+                },
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "Weightlift")
+                }
+
+            }
+
+            Spacer(modifier = Modifier.height(50.dp))
+            Button(onClick = {
+
+            },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFC0CB), // Pink background
+                    contentColor = Color.Black
+                )
+                , modifier = Modifier.fillMaxWidth()
+            ) { Text(text = "Add activity") }
+//            Spacer(modifier = Modifier.height(30.dp))
+            Button(onClick = {},
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFC0CB), // Pink background
+                    contentColor = Color.Black
+                ),
+                modifier = Modifier.fillMaxWidth()) { Text(text = "Create a goal") }
+
         }
+
+        // Special Video button aligned to the bottom center
         Button(
             onClick = {},
             modifier = Modifier
@@ -677,6 +754,7 @@ fun TrainerScreen(
     var review by remember {mutableStateOf((""))}
     var starRating by remember { mutableIntStateOf(5) } // Default to 5 stars
     val userInfo = GlobalUserInfo.userInfo
+    var isPremiumUser = GlobalUserInfo.userInfo?.isPremium == true
     BackHandler(enabled = screen == 2) {
         screen = 1
     }
@@ -688,19 +766,19 @@ fun TrainerScreen(
             .pointerInput(Unit) {
                 detectHorizontalDragGestures { change, dragAmount ->
                     change.consume()
-                    if (dragAmount > 50) {
+                    if (dragAmount > 35) {
                         onSwipeLeft()
-                    } else if (dragAmount < -50) {
+                    } else if (dragAmount < -35) {
                         onSwipeRight()
                     }
                 }
             },
         contentAlignment = Alignment.Center
     ) {         ///Need to update the below once we get paid users
-        if (userInfo == null) {
+        if (userInfo == null || !isPremiumUser) {
             Text(text = "This is for premium users only!")
         }
-        else if (screen == 1 && userInfo.usertype != "G") {
+        else if (screen == 1) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Button(onClick = {}) {
                     Text(text = "View Workout Goals")
@@ -755,7 +833,6 @@ fun TrainerScreen(
         }
     }
 }
-
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
@@ -764,13 +841,15 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
 ) {
     val userInfo = GlobalUserInfo.userInfo
-    var screen by remember { mutableIntStateOf(1)}
-    BackHandler (enabled = screen == 1){
-        onMainMenu()
-    }
-    BackHandler (enabled = screen == 2){
-        screen = 1
-    }
+    var screen by remember { mutableIntStateOf(1) }
+    var selectedWorkInProgressScreen by remember { mutableIntStateOf(0) }
+    var isPremiumUser by remember { mutableStateOf(userInfo?.isPremium == true) }
+
+    BackHandler(enabled = screen == 1) { onMainMenu() }
+    BackHandler(enabled = screen == 2) { screen = 1 }
+    BackHandler(enabled = screen == 3) { screen = 2 }
+    BackHandler(enabled = screen == 4) { screen = 2 }
+
     Box(
         modifier = modifier
             .pointerInput(Unit) {
@@ -783,47 +862,206 @@ fun SettingsScreen(
             },
         contentAlignment = Alignment.Center
     ) {
-        if (screen == 1) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-                if (userInfo != null && userInfo.usertype != "G") {
-                    Text(
-                        text = "Age: ${userInfo.age}\tWeight: ${userInfo.weight}lbs",
-                        modifier = Modifier.padding(16.dp)
-                    )
-                    Text(
-                        text = "Height: ${userInfo.heightFt}'${userInfo.heightIn}''",
-                        modifier = Modifier.padding(16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = {}) {
-                        Text(text = "Upgrade to premium")
+        when (screen) {
+            1 -> {
+                // Main Settings Screen
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (userInfo != null && userInfo.usertype != "G") {
+                        Text(
+                            text = "Age: ${userInfo.age}\tWeight: ${userInfo.weight}lbs",
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        Text(
+                            text = "Height: ${userInfo.heightFt}'${userInfo.heightIn}''",
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = {}) {
+                            Text(text = "External Devices")
+                        }
+                    } else {
+                        Text(text = "You are currently a guest\nand do not have access to all features!")
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = {}) {
-                        Text(text = "External Devices")
+                    Button(onClick = { screen = 2 }) {
+                        Text(text = "Account Settings")
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-                else {
-                    Text(text = "You are currently a guest\nand do not have access to all features!")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = {screen = 2}) {
-                    Text(text = "Account Settings")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
             }
-        }
-        if (screen == 2) {
-            Button(onClick = {
-                GlobalUserInfo.userInfo = null
-                onBackClick() })
-            {
-                Text(text = "Log out")
+            2 -> {
+                // Account Settings Screen with Logout and Subscription Button
+                Column(
+//                    verticalArrangement = Arrangement.SpaceEvenly,
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .padding(16.dp)
+                    verticalArrangement = Arrangement.Top,
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Profile")
+                    }
+                    Button(onClick = { screen = 3 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Subscription")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Calendar")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Challenges")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Connections")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Health Stats")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Goals")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Personal Records")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Training & Planning")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Badges")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Activities")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Insights")
+                    }
+                    Button(onClick = { screen = 4 },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "News Feed")
+                    }
+
+                    Button(onClick = {
+                        GlobalUserInfo.userInfo = null
+                        onBackClick()
+
+                    },
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(text = "Log out")
+                    }
+//                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Subscription Button
+
+
+                }
+            }
+            3 -> {
+                // Subscription Page
+                SubscriptionPage(isPremiumUser = isPremiumUser) { updatedPremiumStatus ->
+                    isPremiumUser = updatedPremiumStatus
+                    GlobalUserInfo.userInfo?.isPremium = updatedPremiumStatus
+                }
+            }
+            4 -> {
+                // Work in Progress Page
+                WorkInProgressScreen(selectedScreen = selectedWorkInProgressScreen) {
+                    screen = 2
+                }
             }
         }
     }
 }
+
+@Composable
+fun SubscriptionPage(
+    isPremiumUser: Boolean,
+    onSubscriptionStatusChanged: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    val dbHelper = DatabaseHelper(context)
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        if (!isPremiumUser) {
+            Text(text = "Choose a subscription:", style = MaterialTheme.typography.headlineSmall)
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = {
+
+                onSubscriptionStatusChanged(true)
+                GlobalUserInfo.userInfo?.user?.let { username ->
+                    dbHelper.updateSubscriptionStatus(username, isPremium = true)
+                }
+            }) {
+                Text(text = "Monthly Subscription : $9.99/month")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(onClick = {
+                onSubscriptionStatusChanged(true)
+                GlobalUserInfo.userInfo?.user?.let { username ->
+                    dbHelper.updateSubscriptionStatus(username, isPremium = true)
+                }
+            }) {
+                Text(text = "Annual Subscription: $180.00/year")
+            }
+        } else {
+            Text(text = "You are already a premium member.", color = Color.Green)
+        }
+    }
+}
+
+
+@Composable
+fun WorkInProgressScreen(selectedScreen: Int, onBackClick: () -> Unit) {
+    val screenTitle = when (selectedScreen) {
+        1 -> "Profile"
+        2 -> "Calendar"
+        3 -> "Challenges"
+        4 -> "Connections"
+        5 -> "Health Stats"
+        else -> "Unknown"
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = "$screenTitle - WORK IN PROGRESS", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onBackClick) {
+            Text(text = "Back")
+        }
+    }
+}
+
 @Composable
 fun BottomNavigationBar(
     currentScreen: String,
@@ -889,6 +1127,16 @@ fun SignUp(
     var screen by remember { mutableIntStateOf(1) }
     val context = LocalContext.current
     var errorMessage by remember { mutableStateOf("") }
+    val isPremium = false
+    val securityQuestions = listOf(
+        "Who is your favourite superhero?",
+        "What was the name of your first pet?",
+        "What city were you born in?",
+        "What the name of your street?"
+    )
+    var selectedQuestion by remember { mutableStateOf(securityQuestions[0]) }
+    var expanded by remember { mutableStateOf(false) }
+
     BackHandler (enabled = screen == 2) {
         screen = 1
     }
@@ -1049,8 +1297,31 @@ fun SignUp(
                     modifier = Modifier.fillMaxWidth(0.8f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "What city were you born in?")
-                Spacer(modifier = Modifier.height(8.dp))
+                Text("Select a Security Question:", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = selectedQuestion,
+                    modifier = Modifier
+                        .clickable { expanded = true }
+                        .background(Color.LightGray)
+                        .fillMaxWidth(0.8f)
+                        .padding(8.dp)
+                )
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    securityQuestions.forEach { question ->
+                        DropdownMenuItem(
+                            text = { Text(text = question) },
+                            onClick = {
+                                selectedQuestion = question
+                                expanded = false
+                            }
+                        )
+                    }
+                }
                 TextField(
                     value = secureAnswer,
                     onValueChange = { secureAnswer = it },
@@ -1106,7 +1377,8 @@ fun SignUp(
                                 heightIn = heightInchesValue,
                                 weight = weightValue,
                                 answer = secureAnswer,
-                                userType = userType
+                                userType = userType,
+                                isPremium = isPremium
                             )
 
                             if (isInserted) {
@@ -1115,8 +1387,9 @@ fun SignUp(
                                     GlobalUserInfo.userInfo = userInfo
                                     onSignUpSuccess()
                                 }
-                            } else {
-                                errorMessage = "Could not make new user!"
+                            }
+                            else {
+                                errorMessage = "An account already exists by this name!"
                             }
                         }
                     }
